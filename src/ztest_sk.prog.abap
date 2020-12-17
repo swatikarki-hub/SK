@@ -22,4 +22,4 @@
 *----------------------------------------------------------------------*
 
 REPORT  ZTEST_SK.
-write: 'Hello world Swati'.
+write: 'Hello world Swati Karki'.
