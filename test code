@@ -1,0 +1,883 @@
+*
+REPORT ztest.
+*
+*
+***~ Local Data Declarations
+**    DATA:         lv_tabname TYPE TABNAME.
+**
+***~ Local Constant Declarations
+**    CONSTANTS: lc_prog_name TYPE sycprog    VALUE 'ZGGL_FTS_IBP_SDI_FILTER',
+**               lc_tabname   TYPE rvari_vnam   VALUE 'TABNAME'.
+**
+***    lv_tabname = v_tabname.
+**
+***~ Local Ranges declaration(Inline declaration)
+**    TYPES:     ltt_tabname_r     TYPE RANGE OF tabname.
+**    DATA(lt_tabname_r)       = VALUE ltt_tabname_r( ).
+**
+***~ Get Tablenames from Global Constant table
+**    CALL METHOD zcl_ggl_dev_constants=>get_range_values(
+**      EXPORTING
+**        iv_progname    = lc_prog_name    " Program name
+**        iv_name        = lc_tabname      " Variable name
+**      IMPORTING
+**        ev_range_value = lt_tabname_r ).
+**
+**    IF 1 = 2.
+**
+**    ENDIF.
+*
+*
+**START-OF-SELECTION.
+**
+**BREAK 09236005.
+**
+**SELECT
+**C~PROD_HOR AS FROZENHORIZON, C~LOCNO AS LOCID, A~MATNR_EXT AS MATNR_ERP, A~MTART AS MTART_PR , C~DISPO AS PLANNER, C~MATNR AS PRDID, C~SHZET AS SAFETYDAYSSUPPLY, C~EISBE AS SAFETYSTOCK, L~WERKS AS WERKS_ERP, C~ZZBESKZ, C~ZZDISMM, A~ZZEAN11, C~ZZFEVOR
+**FROM
+**/IBP/MARC_EXT AS C
+**INNER JOIN /IBP/MARA_EXT AS A ON A~LOGSYS = C~LOGSYS AND A~MATNR = C~MATNR
+**INNER JOIN /IBP/LOC_EXT AS L ON L~LOCNO = C~LOCNO AND L~LOCTYPE = `P` AND L~LOGSYS = C~LOGSYS
+**WHERE
+**C~LOGSYS = 'G1DCLNT200'
+**INTO TABLE @data(t_table).
+**
+**BREAK 09236005.
+*
+**&---------------------------------------------------------------------*
+*
+**& Report ZR_CUSTOMER_ITEMCLEAR
+*
+**&
+*
+**&---------------------------------------------------------------------*
+*
+**&
+*
+**&
+*
+**&---------------------------------------------------------------------*
+*
+**REPORT zr_customer_itemclear.
+*
+*TYPES: BEGIN OF ty_budat,
+*
+*         sign(1),
+*
+*         option(2),
+*
+*         low       TYPE budat,
+*
+*         high      TYPE budat,
+*
+*       END OF ty_budat.
+*
+*TYPES: BEGIN OF ty_kunnr,
+*
+*         sign(1),
+*
+*         option(2),
+*
+*         low       TYPE kunnr,
+*
+*         high      TYPE kunnr,
+*
+*       END OF ty_kunnr.
+*
+*DATA: t_lineitems TYPE TABLE OF bapi3007_2,
+*
+*      w_lineitems TYPE bapi3007_2,
+*
+*      w_return    TYPE bapireturn,
+*
+*      l_kunnr     TYPE kunnr VALUE '474',
+*
+*      t_budat     TYPE TABLE OF ty_budat,
+*
+*      w_budat     TYPE ty_budat,
+*
+*      t_kunnr     TYPE TABLE OF ty_kunnr,
+*
+*      w_kunnr     TYPE ty_kunnr.
+*
+*DATA: w_doc_header        TYPE bapiache09,
+*
+*      t_accountreceivable TYPE TABLE OF bapiacar09,
+*
+*      w_accountreceivable TYPE bapiacar09,
+*
+*      t_accounttax        TYPE TABLE OF bapiactx09,
+*
+*      w_accounttax        TYPE bapiactx09,
+*
+*      t_currencyamount    TYPE TABLE OF bapiaccr09,
+*
+*      w_currencyamount    TYPE bapiaccr09,
+*
+*      t_extension2        TYPE TABLE OF bapiparex,
+*
+*      w_extension2        TYPE bapiparex,
+*
+*      t_extension1        TYPE TABLE OF bapiacextc,
+*
+*      w_extension1        TYPE bapiacextc,
+*
+*      t_accountgl         TYPE TABLE OF bapiacgl09,
+*
+*      w_accountgl         TYPE bapiacgl09,
+*
+*      t_return            TYPE TABLE OF bapiret2,
+*
+** w_return type bapiret2,
+*
+*      l_amount            TYPE char18,
+*
+*      t_bsid              TYPE TABLE OF bsid,
+*
+*      w_bsid              TYPE bsid,
+*
+*      l_dmbtrp            TYPE bapidmbtr,
+*
+*      l_result            TYPE bapidmbtr,
+*
+*      l_dmbtrn            TYPE bapidmbtr,
+*
+*      lv_type             TYPE bapiache09-obj_type,
+*
+*      lv_key              TYPE bapiache09-obj_key,
+*
+*      lv_sys              TYPE bapiache09-obj_sys,
+*
+*      l_fiyrs             TYPE budat,
+*
+*      l_fiyrt             TYPE allgstid,
+*
+*      l_index             TYPE sy-index,
+*
+*      l_belnr             TYPE belnr_d,
+*
+*      l_datum             TYPE bapi3007-key_date,
+*
+*      l_message           TYPE char20,
+*
+*      l_postingdate       TYPE budat.
+*
+*PARAMETERS : p_kunnr  TYPE kunnr,
+*
+*             p_kunnrt TYPE kunnr,
+*
+** p_fiyrf TYPE char4 OBLIGATORY DEFAULT '2010'.
+*
+*             p_fiyrt  TYPE char4 OBLIGATORY DEFAULT '2010',
+*
+*             p_bukrs  TYPE bukrs OBLIGATORY DEFAULT '1000'.
+*
+*CLEAR: w_kunnr, w_budat, l_kunnr,l_fiyrs,l_fiyrt,l_postingdate.
+*
+*CONCATENATE p_fiyrt '1231' INTO l_postingdate.
+*
+**CONCATENATE p_fiyrf '0101' INTO l_fiyrs .
+*
+*l_fiyrs = '19500101'.
+*
+*CONCATENATE p_fiyrt '1231' INTO l_fiyrt .
+*
+*l_kunnr = p_kunnr.
+*
+*CALL FUNCTION 'CONVERSION_EXIT_ALPHA_INPUT'
+*  EXPORTING
+*    input  = l_kunnr
+*  IMPORTING
+*    output = l_kunnr.
+*
+*w_budat-sign = 'I'.
+*
+*w_budat-option = 'BT'.
+*
+*w_budat-low = l_fiyrs."'20010101'.
+*
+*IF l_fiyrt IS NOT INITIAL.
+*
+*  w_budat-high = l_fiyrt."'20141231'.
+*
+*ELSE.
+*
+*  w_budat-high = l_fiyrs."'20141231'.
+*
+*ENDIF.
+*
+*APPEND w_budat TO t_budat.
+*
+*IF l_kunnr IS NOT INITIAL.
+*
+*  w_kunnr-sign = 'I'.
+*
+*  w_kunnr-option = 'BT'.
+*
+*  w_kunnr-low = l_kunnr."'20010101'.
+*
+*  w_kunnr-high = p_kunnrt."'20141231'.
+*
+*  APPEND w_kunnr TO t_kunnr.
+*
+*ENDIF.
+*
+*SELECT * FROM bsid INTO TABLE t_bsid WHERE bukrs = p_bukrs AND
+*
+*kunnr IN t_kunnr AND
+*
+*budat IN t_budat.
+*
+*DELETE ADJACENT DUPLICATES FROM t_bsid COMPARING kunnr.
+*
+*IF t_bsid[] IS NOT INITIAL.
+*
+*  LOOP AT t_bsid INTO w_bsid.
+*
+*    l_kunnr = w_bsid-kunnr.
+*
+*    CALL FUNCTION 'CONVERSION_EXIT_ALPHA_INPUT'
+*      EXPORTING
+*        input  = l_kunnr
+*      IMPORTING
+*        output = l_kunnr.
+*
+*    REFRESH t_lineitems[].
+*
+*    CALL FUNCTION 'BAPI_AR_ACC_GETOPENITEMS'
+*      EXPORTING
+*        companycode = p_bukrs
+*        customer    = l_kunnr "'258'
+**       keydate     = '20101231'
+*        keydate     = l_fiyrt "'20001231'
+**       NOTEDITEMS  = ' '
+**       SECINDEX    = ' '
+*      IMPORTING
+*        return      = w_return
+*      TABLES
+*        lineitems   = t_lineitems.
+*
+**---Fill GL details-----*
+*
+*    CLEAR: w_accountgl,w_doc_header,w_accountreceivable, w_currencyamount,
+*
+*    l_dmbtrp,l_dmbtrn.
+*
+*    REFRESH: t_accountgl[],t_accountreceivable[],t_currencyamount[],
+*
+*    t_extension1[],t_return[].
+*
+*    w_accountgl-itemno_acc = '0000000001'.
+*
+*    w_accountgl-gl_account = '0000113100'.
+*
+*    w_accountgl-item_text = 'Test'.
+*
+*    w_accountgl-comp_code = p_bukrs."'3000'.
+*
+*    w_accountgl-bus_area = '5000'.
+*
+*    w_accountgl-value_date = l_postingdate."'20081231'."sy-datum.
+*
+*    w_accountgl-pstng_date = l_postingdate."'20081231'."sy-datum.
+*
+*    w_accountgl-doc_type = 'SA'.
+*
+*    w_accountgl-fis_period = l_postingdate+4(2)."'12'."'10'.
+*
+*    w_accountgl-fisc_year = p_fiyrt."'2014'.
+*
+*    APPEND w_accountgl TO t_accountgl.
+*
+**---Fill Header details-----*
+*
+*    w_doc_header-bus_act = 'RFBU'.
+*
+*    w_doc_header-obj_type = 'BKPFF'."'VBRK'.
+*
+*    w_doc_header-obj_key = '$'.
+*
+*    w_doc_header-obj_sys = 'T90CLNT090'.
+*
+*    w_doc_header-username = sy-uname.
+*
+*    w_doc_header-header_txt = 'TEST BOC BAPI POSTING'.
+*
+*    w_doc_header-comp_code = p_bukrs."'3000'.
+*
+*    w_doc_header-doc_date = l_postingdate."'20081231'."sy-datum.
+*
+*    w_doc_header-pstng_date = l_postingdate."'20081231'."sy-datlo.
+*
+*    w_doc_header-doc_type = 'SA'." RV
+*
+**---Fill Customer details-----*
+*
+*    w_accountreceivable-itemno_acc = '0000000002'.
+*
+*    w_accountreceivable-customer = l_kunnr."'0000000272'.
+*
+*    w_accountreceivable-comp_code = p_bukrs."'3000'.
+*
+*    w_accountreceivable-bus_area = '5000'."'5000'.
+*
+*    APPEND w_accountreceivable TO t_accountreceivable.
+*
+**------Segregating Positive and Negative Amounts---------------------*
+*
+*    SORT t_lineitems[] ASCENDING BY amt_doccur.
+*
+*    CLEAR: w_lineitems.
+*
+*    LOOP AT t_lineitems INTO w_lineitems.
+*
+** IF w_lineitems-sp_gl_ind = ' '.
+*
+*      IF w_lineitems-db_cr_ind = 'S'.
+*
+*        l_dmbtrp = w_lineitems-lc_amount + l_dmbtrp.
+*
+*      ELSE.
+*
+*        l_dmbtrn = w_lineitems-lc_amount + l_dmbtrn.
+*
+*      ENDIF.
+*
+** ENDIF.
+*
+*    ENDLOOP.
+*
+*    l_dmbtrn = -1 * l_dmbtrn.
+*
+*    l_result = l_dmbtrp + l_dmbtrn.
+*
+**------Segregating Positive and Negative Amounts---------------------*
+*
+**------Fill Currency Amount and posting key if amount is Positive-------*
+*
+*    IF l_dmbtrp IS NOT INITIAL.
+*
+*      w_currencyamount-itemno_acc = '0000000001'.
+*
+*      w_currencyamount-currency_iso = 'USD'.
+*
+*      w_currencyamount-amt_doccur = l_dmbtrp."p_amount."'12427.70'."'748'. 10911.80
+*
+*      APPEND w_currencyamount TO t_currencyamount.
+*
+*      l_dmbtrp = -1 * l_dmbtrp.
+*
+*      w_currencyamount-itemno_acc = '0000000002'.
+*
+*      w_currencyamount-currency_iso = 'USD'.
+*
+*      w_currencyamount-amt_doccur = l_dmbtrp."l_amount."'-748'. 12427.70
+*
+*      APPEND w_currencyamount TO t_currencyamount.
+*
+*      w_extension1-field1 = '000000000140'.
+*
+*      APPEND w_extension1 TO t_extension1.
+*
+*      w_extension1-field1 = '000000000217'.
+*
+*      APPEND w_extension1 TO t_extension1.
+*
+*    ENDIF.
+*
+**------Fill Currency Amount and posting key if amount is Positive-------*
+*
+**------Fill Currency Amount and posting key if amount is negative-------*
+*
+*    IF l_dmbtrn IS NOT INITIAL.
+*
+*      IF l_dmbtrp IS INITIAL.
+*
+*        w_currencyamount-itemno_acc = '0000000001'.
+*
+*      ELSE.
+*
+*        w_currencyamount-itemno_acc = '0000000003'.
+*
+*      ENDIF.
+*
+*      w_currencyamount-currency_iso = 'USD'.
+*
+*      w_currencyamount-amt_doccur = l_dmbtrn." p_amount."'12427.70'."'748'. 10911.80
+*
+*      APPEND w_currencyamount TO t_currencyamount.
+*
+*      l_dmbtrn = -1 * l_dmbtrn.
+*
+*      IF l_dmbtrp IS INITIAL.
+*
+*        w_currencyamount-itemno_acc = '0000000002'.
+*
+*      ELSE.
+*
+*        w_currencyamount-itemno_acc = '0000000004'.
+*
+*      ENDIF.
+*
+*      w_currencyamount-currency_iso = 'USD'.
+*
+*      w_currencyamount-amt_doccur = l_dmbtrn."l_amount."'-748'. 12427.70
+*
+*      APPEND w_currencyamount TO t_currencyamount.
+*
+*      w_extension1-field1 = '000000000350'.
+*
+*      APPEND w_extension1 TO t_extension1.
+*
+*      w_extension1-field1 = '000000000407'.
+*
+*      APPEND w_extension1 TO t_extension1.
+*
+*    ENDIF.
+*
+**------Fill Currency Amount and posting key if amount is negative-------*
+*
+** BREAK-POINT.
+*
+*    CALL FUNCTION 'BAPI_ACC_DOCUMENT_CHECK'
+*      EXPORTING
+*        documentheader    = w_doc_header
+**       CUSTOMERCPD       =
+**       CONTRACTHEADER    =
+*      TABLES
+*        accountgl         = t_accountgl
+*        accountreceivable = t_accountreceivable
+**       ACCOUNTPAYABLE    =
+**       ACCOUNTTAX        =
+*        currencyamount    = t_currencyamount
+**       CRITERIA          =
+**       VALUEFIELD        =
+*        extension1        = t_extension1
+*        return            = t_return.
+*
+*    REFRESH: t_return[].
+*
+*    CALL FUNCTION 'BAPI_ACC_DOCUMENT_POST'
+*      EXPORTING
+*        documentheader    = w_doc_header
+**       CUSTOMERCPD       =
+**       CONTRACTHEADER    =
+*      IMPORTING
+*        obj_type          = lv_type
+*        obj_key           = lv_key
+*        obj_sys           = lv_sys
+*      TABLES
+*        accountgl         = t_accountgl
+*        accountreceivable = t_accountreceivable
+*        currencyamount    = t_currencyamount
+*        extension1        = t_extension1
+*        return            = t_return.
+*
+*    READ TABLE t_return INTO w_return WITH KEY type = 'E'.
+*
+*    IF sy-subrc <> 0.
+*
+*      CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'.
+*
+*      WAIT UP TO 5 SECONDS.
+*
+*      CLEAR l_datum.
+*
+*      CONCATENATE sy-datum+0(4) '1231' INTO l_datum.
+*
+**------Clear Customer Open lineitems--------*
+*
+*      l_belnr = lv_key+0(10).
+*
+*      CLEAR: l_message.
+*
+*      CALL FUNCTION 'ZFM_CLEAR_DOCUMENTS'
+*        EXPORTING
+*          i_kunnr   = l_kunnr
+*          i_belnr   = l_belnr
+*          i_keydate = l_postingdate "'20141231'
+*          i_fisyr   = p_fiyrt
+*          i_bukrs   = p_bukrs
+*        IMPORTING
+*          e_message = l_message.
+*
+**------Clear Customer Open lineitems--------*
+*
+*    ENDIF.
+*
+*    CLEAR: w_lineitems.
+*
+*  ENDLOOP.
+*
+*ELSE.
+*
+*  WRITE: 'No Open items found for the search criteria'.
+*
+*ENDIF.
+*
+*WRITE: 'Hi'.
+*
+*WRITE: lv_key,
+*
+*/ l_message.
+*
+**FUNCTION zfm_clear_documents.
+**
+***"----------------------------------------------------------------------
+**
+***"*"Local Interface:
+**
+***" IMPORTING
+**
+***" VALUE(I_KUNNR) TYPE KUNNR OPTIONAL
+**
+***" VALUE(I_BELNR) TYPE BELNR_D OPTIONAL
+**
+***" VALUE(I_KEYDATE) TYPE BAPI3007-KEY_DATE DEFAULT '20141231'
+**
+***" VALUE(I_FISYR) TYPE CHAR4 DEFAULT 2000
+**
+***" VALUE(I_BUKRS) TYPE BUKRS OPTIONAL
+**
+***" EXPORTING
+**
+***" VALUE(E_MESSAGE) TYPE CHAR20
+**
+***"----------------------------------------------------------------------
+**
+**  TYPES: BEGIN OF ty_belnr,
+**
+**           sign(1),
+**
+**           option(2),
+**
+**           low       TYPE augbl,
+**
+**           high      TYPE augbl,
+**
+**         END OF ty_belnr.
+**
+**  DATA: t_lineitems    TYPE TABLE OF bapi3007_2,
+**
+**        t_lineitems1   TYPE TABLE OF bapi3007_2,
+**
+**        t_belnr        TYPE TABLE OF ty_belnr,
+**
+**        w_belnr        TYPE ty_belnr,
+**
+**        t_bsad         TYPE TABLE OF bsad,
+**
+**        w_bsad         TYPE bsad,
+**
+**        t_zdt_cust_det TYPE TABLE OF zdt_cust_det,
+**
+**        w_zdt_cust_det TYPE zdt_cust_det,
+**
+**        w_lineitems    TYPE bapi3007_2,
+**
+**        w_return       TYPE bapireturn,
+**
+**        l_kunnr        TYPE kunnr VALUE '474',
+**
+**        t_ausz1        TYPE TABLE OF ausz1,
+**
+**        w_ausz1        TYPE ausz1,
+**
+**        t_ausz2        TYPE TABLE OF ausz2,
+**
+**        w_ausz2        TYPE ausz2,
+**
+**        w_bsid         TYPE bsid,
+**
+**        l_belnr        TYPE belnr_d,
+**
+**        l_char1        TYPE char10,
+**
+**        l_char2        TYPE char4,
+**
+**        l_char3        TYPE char3,
+**
+**        l_count        TYPE i,
+**
+**        l_fisyr        TYPE char4,
+**
+**        l_sno          TYPE i,
+**
+**        l_postingdate  TYPE budat.
+**
+**  CLEAR: w_ausz1,w_ausz2,w_lineitems,l_count,l_kunnr,
+**
+**  l_postingdate,w_lineitems,l_belnr,l_fisyr.
+**
+**  l_kunnr = i_kunnr.
+**
+**  l_postingdate = i_keydate.
+**
+**  CALL FUNCTION 'CONVERSION_EXIT_ALPHA_INPUT'
+**    EXPORTING
+**      input  = l_kunnr
+**    IMPORTING
+**      output = l_kunnr.
+**
+**  CALL FUNCTION 'BAPI_AR_ACC_GETOPENITEMS'
+**    EXPORTING
+**      companycode = i_bukrs "'3000'
+**      customer    = l_kunnr "'258'
+**      keydate     = l_postingdate "'20141231'
+***     NOTEDITEMS  = ' '
+***     SECINDEX    = ' '
+**    IMPORTING
+**      return      = w_return
+**    TABLES
+**      lineitems   = t_lineitems.
+**
+**  WAIT UP TO 3 SECONDS.
+**
+**  l_belnr = i_belnr.
+**
+**  l_fisyr = i_fisyr.
+**
+*** LOOP AT t_lineitems INTO w_lineitems.
+**
+***
+**
+**** IF w_lineitems-pstng_date+0(4) <= l_fisyr OR
+**
+*** IF w_lineitems-pstng_date <= l_postingdate."sy-datum.
+**
+***
+**
+**** IF w_lineitems-sp_gl_ind = ' '.
+**
+*** APPEND w_lineitems TO t_lineitems1.
+**
+***
+**
+*** w_belnr-sign = 'I'.
+**
+*** w_belnr-option = 'EQ'.
+**
+*** w_belnr-low = w_lineitems-doc_no.
+**
+*** APPEND w_belnr TO t_belnr.
+**
+**** ENDIF.
+**
+***
+**
+*** ENDIF.
+**
+***
+**
+*** CLEAR: w_lineitems,w_belnr.
+**
+*** ENDLOOP.
+**
+**  SELECT SINGLE * FROM bsid INTO w_bsid WHERE belnr = l_belnr.
+**
+**  IF sy-subrc = 0.
+**
+**    DESCRIBE TABLE t_lineitems LINES l_count.
+**
+**    LOOP AT t_lineitems INTO w_lineitems.
+**
+**      l_char3 = l_char3 + 1.
+**
+**      CONDENSE l_char3.
+**
+**      IF l_count <> l_char3.
+**
+**        w_ausz1-belnr = w_lineitems-doc_no.
+**
+**        w_ausz1-bukrs = w_lineitems-comp_code.
+**
+**        w_ausz1-gjahr = w_lineitems-fisc_year.
+**
+**        w_ausz1-buzei = w_lineitems-item_num."001."l_char3."w_lineitems-item_num.
+**
+**        APPEND w_ausz1 TO t_ausz1.
+**
+**        w_ausz2-bukrs = w_bsid-bukrs.
+**
+**        w_ausz2-aktio = 'A'.
+**
+**        w_ausz2-augbl = w_bsid-belnr.
+**
+**        w_ausz2-augdt = l_postingdate."'20081231'."sy-datum.
+**
+**        w_ausz2-auggj = w_bsid-gjahr.
+**
+**        APPEND w_ausz2 TO t_ausz2.
+**
+**        CALL FUNCTION 'CLEAR_DOCUMENTS' " IN UPDATE TASK
+**          TABLES
+**            t_ausz1 = t_ausz1
+**            t_ausz2 = t_ausz2.
+**
+**        CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'.
+**
+**        w_belnr-sign = 'I'.
+**
+**        w_belnr-option = 'EQ'.
+**
+**        w_belnr-low = w_lineitems-doc_no.
+**
+**        APPEND w_belnr TO t_belnr.
+**
+**        CLEAR: w_lineitems.
+**
+**        REFRESH: t_ausz2[],t_ausz1[].
+**
+**        WAIT UP TO 3 SECONDS.
+**
+**      ELSE.
+**
+**        w_belnr-sign = 'I'.
+**
+**        w_belnr-option = 'EQ'.
+**
+**        w_belnr-low = l_belnr.
+**
+**        APPEND w_belnr TO t_belnr.
+**
+**      ENDIF.
+**
+**    ENDLOOP.
+**
+**    CLEAR: w_ausz1,w_ausz2.
+**
+**    REFRESH: t_ausz1[],t_ausz2.
+**
+**    w_ausz1-belnr = l_belnr."w_bsid-belnr.
+**
+**    w_ausz1-bukrs = w_bsid-bukrs.
+**
+**    w_ausz1-gjahr = w_bsid-gjahr.
+**
+**    w_ausz1-buzei = w_lineitems-item_num."002."w_lineitems-item_num.
+**
+**    APPEND w_ausz1 TO t_ausz1.
+**
+**    w_ausz2-bukrs = w_bsid-bukrs.
+**
+**    w_ausz2-aktio = 'A'.
+**
+**    w_ausz2-augbl = l_belnr."w_bsid-belnr.
+**
+**    w_ausz2-augdt = l_postingdate."'20081231'."'sy-datum.
+**
+**    w_ausz2-auggj = w_bsid-gjahr.
+**
+**    APPEND w_ausz2 TO t_ausz2.
+**
+**    CLEAR: w_lineitems.
+**
+**    CALL FUNCTION 'CLEAR_DOCUMENTS'
+**      TABLES
+**        t_ausz1 = t_ausz1
+**        t_ausz2 = t_ausz2.
+**
+**    CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'.
+**
+**    WAIT UP TO 3 SECONDS.
+**
+**    SELECT * FROM bsad INTO TABLE t_bsad WHERE bukrs = i_bukrs AND
+**
+**    kunnr = l_kunnr AND
+**
+*** umsks = ' ' AND
+**
+*** umskz = ' ' AND
+**
+**    belnr IN t_belnr.
+**
+**    IF t_bsad[] IS NOT INITIAL.
+**
+**      CLEAR: w_lineitems ,w_bsad,w_zdt_cust_det,l_sno.
+**
+**      LOOP AT t_lineitems INTO w_lineitems.
+**
+*** IF w_lineitems-sp_gl_ind = ' '.
+**
+**        READ TABLE t_bsad INTO w_bsad WITH KEY bukrs = w_lineitems-comp_code
+**
+**        kunnr = w_lineitems-customer
+**
+**        belnr = w_lineitems-doc_no.
+**
+**        CALL FUNCTION 'GUID_CREATE'
+**          IMPORTING
+**            ev_guid_16 = w_zdt_cust_det-z_sno.
+**
+**        IF sy-subrc = 0.
+**
+**          w_zdt_cust_det-z_bukrs = w_bsad-bukrs.
+**
+**          w_zdt_cust_det-z_kunnr = w_bsad-kunnr.
+**
+**          w_zdt_cust_det-z_belnr = w_bsad-belnr.
+**
+**          w_zdt_cust_det-z_status = 'X'.
+**
+**          w_zdt_cust_det-z_clearingdoc = l_belnr.
+**
+**          w_zdt_cust_det-z_desc = 'Cleared'.
+**
+**          APPEND w_zdt_cust_det TO t_zdt_cust_det.
+**
+**        ELSE.
+**
+**          w_zdt_cust_det-z_bukrs = w_lineitems-comp_code.
+**
+**          w_zdt_cust_det-z_kunnr = w_lineitems-customer.
+**
+**          w_zdt_cust_det-z_belnr = w_lineitems-doc_no.
+**
+**          w_zdt_cust_det-z_status = ' '.
+**
+**          w_zdt_cust_det-z_clearingdoc = ' '.
+**
+**          w_zdt_cust_det-z_desc = 'Not cleared'.
+**
+**          APPEND w_zdt_cust_det TO t_zdt_cust_det.
+**
+**        ENDIF.
+**
+**        CLEAR: w_lineitems ,w_bsad,w_zdt_cust_det.
+**
+*** ENDIF.
+**
+**      ENDLOOP.
+**
+**      INSERT zdt_cust_det FROM TABLE t_zdt_cust_det.
+**
+**      IF sy-subrc = 0.
+**
+**        e_message = 'update sucess'.
+**
+**      ELSE.
+**
+**        e_message = 'update fail'.
+**
+**      ENDIF.
+**
+**      REFRESH:t_zdt_cust_det[].
+**
+**    ENDIF.
+**
+**  ENDIF.
+**
+**ENDFUNCTION.
+
+DATA: lt_mara TYPE ZGTT_MARA_AMDP.
+
+PARAMETERS : p_matnr TYPE matnr.
+
+START-OF-SELECTION.
+
+zcl_test_1=>get_data_from_mara( EXPORTING ip_mandt = sy-mandt
+                                          ip_matnr = p_matnr
+                                          ip_spras = sy-langu
+                                IMPORTING et_mara = lt_mara ).
+
+CL_DEMO_OUTPUT=>DISPLAY_DATA( EXPORTING VALUE = LT_MARA ).
