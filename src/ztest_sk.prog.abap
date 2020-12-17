@@ -24,3 +24,4 @@
 REPORT  ZTEST_SK.
 write: 'Hello world 1'.
 WRITE: 'New branch'.
+Write: 'Developer branch2'.
