@@ -21,6 +21,5 @@
 *                                                                      *
 *----------------------------------------------------------------------*
 
-REPORT  ZTEST_SK.
-write: 'Hello world 1'.
-WRITE: 'New branch'.
+REPORT  ZTEST_SK2.
+write: 'Hello World initial'.
