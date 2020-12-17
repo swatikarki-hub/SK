@@ -1,7 +1,7 @@
 *
 REPORT ztest.
 *
-*
+*test
 ***~ Local Data Declarations
 **    DATA:         lv_tabname TYPE TABNAME.
 **
