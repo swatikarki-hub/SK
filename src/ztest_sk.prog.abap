@@ -22,5 +22,5 @@
 *----------------------------------------------------------------------*
 
 REPORT  ZTEST_SK.
-write: 'Hello world Swati Karki git'.
+write: 'Hello world 1'.
 WRITE: 'New branch'.
